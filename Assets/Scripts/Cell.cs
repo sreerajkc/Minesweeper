@@ -1,6 +1,7 @@
 ﻿
+using System.Collections.Generic;
 using UnityEngine;
-public struct Cell
+public class Cell
 {
     public enum Type
     {
@@ -16,5 +17,7 @@ public struct Cell
     public bool revealed;
     public bool flagged;
     public bool exploded;
+
+    public List<Cell> validNeighbours = new List<Cell>();
 }
 

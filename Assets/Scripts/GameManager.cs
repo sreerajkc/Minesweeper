@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.WindowsRuntime;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 using Random = UnityEngine.Random;
@@ -187,7 +188,8 @@ public class GameManager : MonoBehaviour
                 break;
         }
 
-        CheckWinCondition();
+        if (CheckWinCondition()) gameOver = true;
+
     }
 
     public void RevealNumber(Cell cell)
@@ -204,7 +206,7 @@ public class GameManager : MonoBehaviour
         if (cell.revealed) return;
         if (cell.type == Cell.Type.Mine || cell.type == Cell.Type.Invalid) return;
 
-        if (cell.type == Cell.Type.Number)revealedCells.Add(cell);
+        if (cell.type == Cell.Type.Number) revealedCells.Add(cell);
 
         nonMineCellCount--;
 
@@ -244,12 +246,9 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    private void CheckWinCondition()
+    public bool CheckWinCondition()
     {
-        if (nonMineCellCount == 0)
-        {
-            gameOver = true;
-        }
+        return nonMineCellCount <= 0;
     }
 
     public Cell GetCell(int x, int y)
@@ -267,7 +266,7 @@ public class GameManager : MonoBehaviour
         RaycastHit2D hit = Physics2D.Raycast(Camera.main.ScreenToWorldPoint(Input.mousePosition), Vector2.zero);
         Vector2Int cellPosition = Vector2Int.zero;
 
-        if ( hit && hit.collider != null && hit.collider.CompareTag("Cell"))
+        if (hit && hit.collider != null && hit.collider.CompareTag("Cell"))
         {
             cellPosition.x = (int)hit.collider.transform.position.x;
             cellPosition.y = (int)hit.collider.transform.position.y;
@@ -286,5 +285,10 @@ public class GameManager : MonoBehaviour
         return x >= 0 && x < width && y >= 0 && y < height;
     }
 
-   
+    [ContextMenu("R")]
+    public void showBorder()
+    {
+        solver.Solve(cells);
+    }
+
 }

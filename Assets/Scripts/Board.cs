@@ -35,9 +35,10 @@ public class Board : MonoBehaviour
             for (int j = 0; j < height; j++)
             {
                 Cell cell = cells[i, j];
-                GameObject go = Instantiate(spritePref,transform);
+                GameObject go = Instantiate(spritePref, transform);
                 go.transform.position = new Vector3(cell.position.x, cell.position.y, 0);
-                spriteMap[i,j] = go.GetComponent<SpriteRenderer>();
+                go.transform.name = "[" + i + "," + j + "]";
+                spriteMap[i, j] = go.GetComponent<SpriteRenderer>();
                 SetSprite(cell.position, GetSprite(cell));
             }
         }
@@ -45,7 +46,7 @@ public class Board : MonoBehaviour
 
     private void SetSprite(Vector2Int position, Sprite sprite)
     {
-        spriteMap[position.x,position.y].sprite = sprite;
+        spriteMap[position.x, position.y].sprite = sprite;
     }
 
     public void DrawSingleCell(Cell cell)

@@ -1,11 +1,14 @@
-﻿using System.Collections;
+﻿
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
+using System.Security.Principal;
 using UnityEngine;
-using UnityEngine.Tilemaps;
 
 public class Solver : MonoBehaviour
 {
-    public void Solve(/*List<Cell> cellsToCheck*/ Cell[,] cells)
+    private IEnumerator solveCor;
+    /*public void Solve(Cell[,] cells)
     {
         int width = cells.GetLength(0);
         int height = cells.GetLength(1);
@@ -33,28 +36,30 @@ public class Solver : MonoBehaviour
         }
 
 
-    }
+    }*/
 
-    public IEnumerator SolveRoutine(Cell[,] cells)
+    public Vector2Int cellPos;
+
+    public void Solve(Cell[,] cells)
     {
-        int width = cells.GetLength(0);
+        /*int width = cells.GetLength(0);
         int height = cells.GetLength(1);
-
-        List<Cell> neighbours, flaggedNeighbours;
 
         for (int i = 0; i < width; i++)
         {
             for (int j = 0; j < height; j++)
             {
-                yield return new WaitForSeconds(1);
-                Debug.Log(i + ":" + j + "-" + cells[i, j].revealed);
+                *//*yield return new WaitForSeconds(1);
+                Debug.Log(i + ":" + j + "-" + cells[i, j].revealed);*//*
 
                 if (!cells[i, j].revealed)
                 {
                     continue;
                 }
+                SolveCell(cells[i, j]);
+                yield break;
 
-                neighbours = GetNeighbours(cells[i, j]);
+                *//*neighbours = GetNeighbours(cells[i, j]);
 
                 if (cells[i, j].number == neighbours.Count)
                 {
@@ -66,9 +71,117 @@ public class Solver : MonoBehaviour
                 if (cells[i, j].number == flaggedNeighbours.Count)
                 {
                     RevealAll(GetNonFlaggedNeighbours(cells[i, j]));
+                }*//*
+            }
+        }*/
+
+        SolveCell(cells[cellPos.x, cellPos.y]);
+    }
+
+    public void SolveCell(Cell cell, Cell pairedCell = null)
+    {
+        if (GameManager.Instance.CheckWinCondition())
+        {
+
+            return;
+        }
+
+        List<Cell> neighbours, flaggedNeighbours;
+
+        neighbours = GetNeighbours(cell);
+        if (cell.number == neighbours.Count)
+        {
+            FlagAll(neighbours);
+        }
+
+        flaggedNeighbours = GetFlaggedNeighbours(cell);
+
+        if (cell.number == flaggedNeighbours.Count)
+        {
+            RevealAll(GetNonFlaggedNeighbours(cell));
+        }
+
+        Cell validNeighbour = GetValidNeighbour(cell, pairedCell);
+
+        if (validNeighbour.type == Cell.Type.Invalid)
+        {
+            return;
+        }
+
+        List<Cell> nonFlaggedNeighbours_Cell = GetNonFlaggedNeighbours(cell);
+        List<Cell> nonFlaggedNeighbours_b = GetNonFlaggedNeighbours(validNeighbour);
+
+        Debug.LogWarning("A :" + cell.position.x + " : " + cell.position.y);
+        Debug.Log("NON FLAGGED NEIGHBOURS A");
+        PrintList(nonFlaggedNeighbours_Cell);
+        Debug.LogWarning("B :" + validNeighbour.position.x + " : " + validNeighbour.position.y);
+        Debug.Log("NON FLAGGED NEIGHBOURS B");
+        PrintList(nonFlaggedNeighbours_b);
+
+        List<Cell> tempHashA = nonFlaggedNeighbours_Cell.Except(nonFlaggedNeighbours_b).ToList();
+        Debug.Log("A|B");
+        PrintList(tempHashA);
+
+        List<Cell> tempHashB = nonFlaggedNeighbours_b.Except(nonFlaggedNeighbours_Cell).ToList();
+        Debug.Log("B|A");
+        PrintList(tempHashB);
+
+        int aNum = cell.number - flaggedNeighbours.Count;
+        int bNum = validNeighbour.number - GetFlaggedNeighbours(validNeighbour).Count;
+
+        if (Mathf.Abs(aNum - bNum) == tempHashA.Count)
+        {
+            FlagAll(tempHashA.ToList());
+            RevealAll(tempHashB.ToList());
+        }
+
+        solveCor = SolveAgain(validNeighbour, cell);
+        StartCoroutine(solveCor);
+    }
+
+    IEnumerator SolveAgain(Cell cell, Cell pairedCell)
+    {
+        yield return new WaitForSeconds(1);
+        SolveCell(cell, pairedCell);
+        yield break;
+    }
+
+    public Cell GetValidNeighbour(Cell cell, Cell pairedCell)
+    {
+        int x, y;
+        Cell cellToLookAt;
+
+        if (cell.validNeighbours.Count == 0)
+        {
+
+        }
+
+        for (int adjX = -1; adjX <= 1; adjX++)
+        {
+            for (int adjY = -1; adjY <= 1; adjY++)
+            {
+                if (adjX == 0 && adjY == 0)
+                {
+                    continue;
+                }
+
+                x = cell.position.x + adjX;
+                y = cell.position.y + adjY;
+
+                cellToLookAt = GameManager.Instance.GetCell(x, y);
+
+                if (pairedCell != null && cellToLookAt.position == pairedCell.position)
+                {
+                    continue;
+                }
+
+                if (cellToLookAt.type == Cell.Type.Number && cellToLookAt.revealed && GetNeighbours(cellToLookAt).Count != 0)
+                {
+                    return cellToLookAt;
                 }
             }
         }
+        return new Cell();
     }
 
     public List<Cell> GetNeighbours(Cell cell)
@@ -184,10 +297,13 @@ public class Solver : MonoBehaviour
         }
     }
 
-    [ContextMenu("R")]
-    public void showBorder()
+
+    public void PrintList(List<Cell> cells)
     {
-        /*solver.Solve(cells);*/
-        StartCoroutine("SolveRoutine", GameManager.Instance.cells);
+        foreach (Cell cell in cells)
+        {
+            Debug.Log(cell.position.x + ":" + cell.position.y);
+        }
     }
+
 }
