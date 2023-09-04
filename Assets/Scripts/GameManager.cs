@@ -2,12 +2,15 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 using Random = UnityEngine.Random;
 
 public class GameManager : MonoBehaviour
 {
+    public static GameManager Instance;
+
     [Header("Board Properties")]
     public Board board;
     [Space(10)]
@@ -15,12 +18,21 @@ public class GameManager : MonoBehaviour
     public int height;
     public int mineCount;
 
-    private Cell[,] cells;
+    [Header("Solver")]
+    public Solver solver;
+    private List<Cell> revealedCells;
+
+    public Cell[,] cells;
     private Cell[] mineCells;
 
     private bool gameOver;
 
     private int nonMineCellCount;
+
+    public void Awake()
+    {
+        Instance = this;
+    }
 
     private void Start()
     {
@@ -31,6 +43,7 @@ public class GameManager : MonoBehaviour
     {
         cells = new Cell[width, height];
         mineCells = new Cell[mineCount];
+        revealedCells = new List<Cell>();
 
         nonMineCellCount = (width * height) - mineCount;
 
@@ -50,7 +63,7 @@ public class GameManager : MonoBehaviour
             for (int j = 0; j < height; j++)
             {
                 Cell cell = new Cell();
-                cell.position = new Vector3Int(i, j, 0);
+                cell.position = new Vector2Int(i, j);
                 cell.type = Cell.Type.Empty;
                 cells[i, j] = cell;
             }
@@ -133,40 +146,29 @@ public class GameManager : MonoBehaviour
         {
             if (Input.GetMouseButtonDown(1))
             {
-                Flag();
+                Flag(GetCellOnMousePosition());
             }
             else if (Input.GetMouseButtonDown(0))
             {
-                Reveal();
+                Reveal(GetCellOnMousePosition());
             }
         }
     }
 
-    private void Flag()
+    public void Flag(Cell cell)
     {
-        Vector3 worldPosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-        Vector3Int cellPosition = board.tilemap.WorldToCell(worldPosition);
-
-        Cell cell = GetCell(cellPosition.x, cellPosition.y);
-
         if (cell.type == Cell.Type.Invalid || cell.revealed)
         {
             return;
         }
-
         cell.flagged = !cell.flagged;
-        cells[cellPosition.x, cellPosition.y] = cell;
-        board.DrawSingleCell(cells[cellPosition.x, cellPosition.y]);
+        cells[cell.position.x, cell.position.y] = cell;
+        board.DrawSingleCell(cells[cell.position.x, cell.position.y]);
     }
 
 
-    private void Reveal()
+    public void Reveal(Cell cell)
     {
-        Vector3 worldPosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-        Vector3Int cellPosition = board.tilemap.WorldToCell(worldPosition);
-
-        Cell cell = GetCell(cellPosition.x, cellPosition.y);
-
         if (cell.type == Cell.Type.Invalid || cell.revealed || cell.flagged)
         {
             return;
@@ -181,20 +183,28 @@ public class GameManager : MonoBehaviour
                 Explode(cell);
                 break;
             case Cell.Type.Number:
-                nonMineCellCount--;
-                cell.revealed = true;
-                cells[cellPosition.x, cellPosition.y] = cell;
-                board.DrawSingleCell(cells[cellPosition.x, cellPosition.y]);
+                RevealNumber(cell);
                 break;
         }
 
         CheckWinCondition();
     }
 
-    private void Flood(Cell cell)
+    public void RevealNumber(Cell cell)
+    {
+        revealedCells.Add(cell);
+        nonMineCellCount--;
+        cell.revealed = true;
+        cells[cell.position.x, cell.position.y] = cell;
+        board.DrawSingleCell(cells[cell.position.x, cell.position.y]);
+    }
+
+    public void Flood(Cell cell)
     {
         if (cell.revealed) return;
         if (cell.type == Cell.Type.Mine || cell.type == Cell.Type.Invalid) return;
+
+        if (cell.type == Cell.Type.Number)revealedCells.Add(cell);
 
         nonMineCellCount--;
 
@@ -242,7 +252,7 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    private Cell GetCell(int x, int y)
+    public Cell GetCell(int x, int y)
     {
         if (IsValid(x, y))
         {
@@ -252,8 +262,29 @@ public class GameManager : MonoBehaviour
         return new Cell();
     }
 
+    public Cell GetCellOnMousePosition()
+    {
+        RaycastHit2D hit = Physics2D.Raycast(Camera.main.ScreenToWorldPoint(Input.mousePosition), Vector2.zero);
+        Vector2Int cellPosition = Vector2Int.zero;
+
+        if ( hit && hit.collider != null && hit.collider.CompareTag("Cell"))
+        {
+            cellPosition.x = (int)hit.collider.transform.position.x;
+            cellPosition.y = (int)hit.collider.transform.position.y;
+        }
+        else
+        {
+            cellPosition = Vector2Int.one * -1;
+        }
+
+        Cell cell = GetCell(cellPosition.x, cellPosition.y);
+        return cell;
+    }
+
     private bool IsValid(int x, int y)
     {
         return x >= 0 && x < width && y >= 0 && y < height;
     }
+
+   
 }

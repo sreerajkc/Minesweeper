@@ -10,7 +10,7 @@ public struct Cell
         Number
     }
 
-    public Vector3Int position;
+    public Vector2Int position;
     public Type type;
     public int number;
     public bool revealed;

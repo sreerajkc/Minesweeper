@@ -5,50 +5,55 @@ using UnityEngine.Tilemaps;
 
 public class Board : MonoBehaviour
 {
+    public SpriteRenderer[,] spriteMap;
 
-    public Tilemap tilemap;
+    public GameObject spritePref;
 
-    public Tile tileUnknown;
-    public Tile tileEmpty;
-    public Tile tileMine;
-    public Tile tileExploded;
-    public Tile tileFlag;
-    public Tile tileNumber1;
-    public Tile tileNumber2;
-    public Tile tileNumber3;
-    public Tile tileNumber4;
-    public Tile tileNumber5;
-    public Tile tileNumber6;
-    public Tile tileNumber7;
-    public Tile tileNumber8;
-
-    // Start is called before the first frame update
-    void Start()
-    {
-        tilemap = GetComponentInChildren<Tilemap>();
-    }
+    public Sprite tileUnknown;
+    public Sprite tileEmpty;
+    public Sprite tileMine;
+    public Sprite tileExploded;
+    public Sprite tileFlag;
+    public Sprite tileNumber1;
+    public Sprite tileNumber2;
+    public Sprite tileNumber3;
+    public Sprite tileNumber4;
+    public Sprite tileNumber5;
+    public Sprite tileNumber6;
+    public Sprite tileNumber7;
+    public Sprite tileNumber8;
 
     public void Draw(Cell[,] cells)
     {
         int width = cells.GetLength(0);
         int height = cells.GetLength(1);
 
+        spriteMap = new SpriteRenderer[width, height];
+
         for (int i = 0; i < width; i++)
         {
             for (int j = 0; j < height; j++)
             {
                 Cell cell = cells[i, j];
-                tilemap.SetTile(cell.position, GetTile(cell));
+                GameObject go = Instantiate(spritePref,transform);
+                go.transform.position = new Vector3(cell.position.x, cell.position.y, 0);
+                spriteMap[i,j] = go.GetComponent<SpriteRenderer>();
+                SetSprite(cell.position, GetSprite(cell));
             }
         }
     }
 
-    public void DrawSingleCell(Cell cell)
+    private void SetSprite(Vector2Int position, Sprite sprite)
     {
-        tilemap.SetTile(cell.position, GetTile(cell));
+        spriteMap[position.x,position.y].sprite = sprite;
     }
 
-    private Tile GetTile(Cell cell)
+    public void DrawSingleCell(Cell cell)
+    {
+        SetSprite(cell.position, GetSprite(cell));
+    }
+
+    private Sprite GetSprite(Cell cell)
     {
         if (cell.revealed)
         {
@@ -65,7 +70,7 @@ public class Board : MonoBehaviour
         }
     }
 
-    private Tile GetRevealedTile(Cell cell)
+    private Sprite GetRevealedTile(Cell cell)
     {
         switch (cell.type)
         {
@@ -77,7 +82,7 @@ public class Board : MonoBehaviour
 
     }
 
-    private Tile GetNumberTile(Cell cell)
+    private Sprite GetNumberTile(Cell cell)
     {
         switch (cell.number)
         {
