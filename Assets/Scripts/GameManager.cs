@@ -29,6 +29,7 @@ public class GameManager : MonoBehaviour
     public bool gameOver;
 
     public int currentNonMineCellCount;
+    public int currentFlaggedCellCount;
     public Cell lastRevealedCell;
 
     public int flaggedMines = 0;
@@ -165,14 +166,21 @@ public class GameManager : MonoBehaviour
         {
             return;
         }
+
+
+        currentFlaggedCellCount++;
         cell.flagged = !cell.flagged;
         cells[cell.position.x, cell.position.y] = cell;
         board.DrawSingleCell(cells[cell.position.x, cell.position.y]);
+
+        if (CheckWinCondition()) gameOver = true;
     }
 
 
     public void Reveal(Cell cell)
     {
+        if (gameOver) return;
+
         if (cell.type == Cell.Type.Invalid || cell.revealed || cell.flagged)
         {
             return;
@@ -197,6 +205,7 @@ public class GameManager : MonoBehaviour
 
     public void RevealNumber(Cell cell)
     {
+        solver.boundaryCells.Add(cell);
         currentNonMineCellCount--;
         cell.revealed = true;
         cells[cell.position.x, cell.position.y] = cell;
@@ -223,6 +232,10 @@ public class GameManager : MonoBehaviour
             Flood(GetCell(cell.position.x + 1, cell.position.y));
             Flood(GetCell(cell.position.x, cell.position.y - 1));
             Flood(GetCell(cell.position.x, cell.position.y + 1));
+        }
+        else
+        {
+            solver.boundaryCells.Add(cell);
         }
 
         if (CheckWinCondition()) gameOver = true;
@@ -253,7 +266,20 @@ public class GameManager : MonoBehaviour
 
     public bool CheckWinCondition()
     {
-        return currentNonMineCellCount <= 0;
+        if (currentNonMineCellCount == 0)
+        {
+            FlagRemainingCells();
+            return true;
+        }
+        else if (currentFlaggedCellCount == mineCount)
+        {
+            RevealRemainingCells();
+            return true;
+        }
+        else
+        {
+            return false;
+        }
     }
 
     public Cell GetCell(int x, int y)
@@ -303,7 +329,7 @@ public class GameManager : MonoBehaviour
         return cells[x,y];
     }
 
-    public void RevealRandomCell()
+    public Cell RevealRandomCell()
     {
         int x, y;
         do
@@ -314,11 +340,42 @@ public class GameManager : MonoBehaviour
         } while (cells[x, y].revealed || cells[x,y].flagged);
 
         Reveal(cells[x, y]);
+        return cells[x,y];
     }
 
     [ContextMenu("R")]
     public void Solve()
     {
         solver.Solve(cells);
+    }
+
+    public void FlagRemainingCells()
+    {
+        for (int i = 0; i < width; i++)
+        {
+            for (int j = 0; j < height; j++)
+            {
+                if (!cells[i,j].flagged)
+                {
+                    cells[i,j].flagged = true;
+                    board.DrawSingleCell(cells[i,j]);
+                }
+            }
+        }
+    }
+
+    public void RevealRemainingCells()
+    {
+        for (int i = 0; i < width; i++)
+        {
+            for (int j = 0; j < height; j++)
+            {
+                if (!cells[i, j].revealed && !cells[i,j].flagged)
+                {
+                    cells[i, j].revealed = true;
+                    board.DrawSingleCell(cells[i, j]);
+                }
+            }
+        }
     }
 }

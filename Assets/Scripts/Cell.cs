@@ -1,6 +1,8 @@
 ﻿
+using System;
 using System.Collections.Generic;
 using UnityEngine;
+[Serializable]
 public class Cell
 {
     public enum Type

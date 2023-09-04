@@ -150,6 +150,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dbc91e114de22824b8af97df3f66e386, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  boundaryCells: []
+  timeInterval: 0.1
 --- !u!4 &18166477
 Transform:
   m_ObjectHideFlags: 0
@@ -341,6 +343,14 @@ MonoBehaviour:
   solver: {fileID: 18166476}
   gameOver: 0
   currentNonMineCellCount: 0
+  currentFlaggedCellCount: 0
+  lastRevealedCell:
+    position: {x: 0, y: 0}
+    type: 0
+    number: 0
+    revealed: 0
+    flagged: 0
+    exploded: 0
   flaggedMines: 0
 --- !u!4 &2104519852
 Transform:
