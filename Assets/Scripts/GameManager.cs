@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.WindowsRuntime;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
 using Random = UnityEngine.Random;
 
@@ -262,6 +263,14 @@ public class GameManager : MonoBehaviour
                 board.DrawSingleCell(cells[cell.position.x, cell.position.y]);
             }
         }
+
+        StartCoroutine("ResetLevel");
+    }
+
+    public IEnumerator ResetLevel()
+    {
+        yield return new WaitForSeconds(3);
+        SceneManager.LoadScene(0);
     }
 
     public bool CheckWinCondition()

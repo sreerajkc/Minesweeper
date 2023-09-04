@@ -16,42 +16,13 @@ public class Solver : MonoBehaviour
     [SerializeField] public List<Cell> boundaryCells;
     [SerializeField] private float timeInterval;
 
-    private int width;
-    private int height;
-
     private bool updatedOnce;
-
     private IEnumerator solveCoroutine;
 
     public void Solve(Cell[,] cells)
     {
-        width = cells.GetLength(0);
-        height = cells.GetLength(1);
-
-        /*        //First time check
-                if (width == 0 || height == 0)
-                {
-                    width = cells.GetLength(0);
-                    height = cells.GetLength(1);
-
-                    for (int x = 0; x < width; x++)
-                    {
-                        for (int y = 0; y < height; y++)
-                        {
-                            Cell cell = cells[x, y];
-                            List<Cell> allNeighbours = GetNeighbours(cell);
-
-                            for (int i = 0; i < allNeighbours.Count; i++)
-                            {
-                                Tuple<Cell, Cell> pair = new Tuple<Cell, Cell>(cell, allNeighbours[i]);
-                                cellPairs.Add(pair);
-                            }
-                        }
-                    }
-
-                }*/
-
         GameManager.Instance.RevealRandomCell();
+
         solveCoroutine = SolveRoutine(boundaryCells);
         StartCoroutine(solveCoroutine);
     }
@@ -70,29 +41,19 @@ public class Solver : MonoBehaviour
             }
 
             neighbours = GetNeighbours(cell);
-
-            if (neighbours.Count == 0)
-            {
-                boundaryCells.Remove(cell);
-                continue;
-            }
-
             if (cell.number == neighbours.Count)
             {
                 yield return new WaitForSeconds(timeInterval);
-                Debug.Log("NORMAL");
-
                 boundaryCells.Remove(cell);
                 updatedOnce = true;
                 FlagAll(neighbours);
             }
 
             flaggedNeighbours = GetFlaggedNeighbours(cell);
-
             if (cell.number == flaggedNeighbours.Count)
             {
                 yield return new WaitForSeconds(timeInterval);
-                Debug.Log("NORMAL");
+
                 boundaryCells.Remove(cell);
                 updatedOnce = true;
                 RevealAll(GetNonFlaggedNeighbours(cell));
@@ -125,14 +86,11 @@ public class Solver : MonoBehaviour
             if (validCellCountA - validCellCountB == AdiffB.Count)
             {
                 yield return new WaitForSeconds(timeInterval);
-                Debug.Log("SETS");
                 updatedOnce = true;
                 FlagAll(AdiffB);
                 RevealAll(BdiffA);
             }
         }
-
-        Debug.Log(updatedOnce);
 
         if (!updatedOnce)
         {
@@ -258,14 +216,6 @@ public class Solver : MonoBehaviour
         {
             boundaryCells.Add(neighbours[i]);
             GameManager.Instance.Reveal(neighbours[i]);
-        }
-    }
-
-    public void PrintList(List<Cell> cells)
-    {
-        foreach (Cell cell in cells)
-        {
-            Debug.Log(cell.position.x + ":" + cell.position.y);
         }
     }
 
