@@ -26,9 +26,12 @@ public class GameManager : MonoBehaviour
     public Cell[,] cells;
     private Cell[] mineCells;
 
-    private bool gameOver;
+    public bool gameOver;
 
-    private int nonMineCellCount;
+    public int currentNonMineCellCount;
+    public Cell lastRevealedCell;
+
+    public int flaggedMines = 0;
 
     public void Awake()
     {
@@ -46,7 +49,7 @@ public class GameManager : MonoBehaviour
         mineCells = new Cell[mineCount];
         revealedCells = new List<Cell>();
 
-        nonMineCellCount = (width * height) - mineCount;
+        currentNonMineCellCount = (width * height) - mineCount;
 
         GenerateCells();
         GenerateMines();
@@ -194,8 +197,7 @@ public class GameManager : MonoBehaviour
 
     public void RevealNumber(Cell cell)
     {
-        revealedCells.Add(cell);
-        nonMineCellCount--;
+        currentNonMineCellCount--;
         cell.revealed = true;
         cells[cell.position.x, cell.position.y] = cell;
         board.DrawSingleCell(cells[cell.position.x, cell.position.y]);
@@ -208,11 +210,12 @@ public class GameManager : MonoBehaviour
 
         if (cell.type == Cell.Type.Number) revealedCells.Add(cell);
 
-        nonMineCellCount--;
-
+        currentNonMineCellCount--;
+        
         cell.revealed = true;
         cells[cell.position.x, cell.position.y] = cell;
         board.DrawSingleCell(cells[cell.position.x, cell.position.y]);
+        lastRevealedCell = cell;
 
         if (cell.type == Cell.Type.Empty)
         {
@@ -221,6 +224,8 @@ public class GameManager : MonoBehaviour
             Flood(GetCell(cell.position.x, cell.position.y - 1));
             Flood(GetCell(cell.position.x, cell.position.y + 1));
         }
+
+        if (CheckWinCondition()) gameOver = true;
     }
 
     private void Explode(Cell cell)
@@ -248,7 +253,7 @@ public class GameManager : MonoBehaviour
 
     public bool CheckWinCondition()
     {
-        return nonMineCellCount <= 0;
+        return currentNonMineCellCount <= 0;
     }
 
     public Cell GetCell(int x, int y)
@@ -285,10 +290,35 @@ public class GameManager : MonoBehaviour
         return x >= 0 && x < width && y >= 0 && y < height;
     }
 
+    public Cell GetRandomRevealedCell()
+    {
+        int x, y;
+        do
+        {
+            x = Random.Range(0, width);
+            y = Random.Range(0, height);
+
+        } while (!cells[x,y].revealed);
+
+        return cells[x,y];
+    }
+
+    public void RevealRandomCell()
+    {
+        int x, y;
+        do
+        {
+            x = Random.Range(0, width);
+            y = Random.Range(0, height);
+
+        } while (cells[x, y].revealed || cells[x,y].flagged);
+
+        Reveal(cells[x, y]);
+    }
+
     [ContextMenu("R")]
-    public void showBorder()
+    public void Solve()
     {
         solver.Solve(cells);
     }
-
 }

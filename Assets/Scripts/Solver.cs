@@ -1,193 +1,144 @@
 ﻿
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Security.Principal;
 using UnityEngine;
+using UnityEngine.UIElements;
+using Random = UnityEngine.Random;
 
 public class Solver : MonoBehaviour
 {
-    private IEnumerator solveCor;
-    /*public void Solve(Cell[,] cells)
-    {
-        int width = cells.GetLength(0);
-        int height = cells.GetLength(1);
+    private List<Tuple<Cell, Cell>> cellPairs = new List<Tuple<Cell, Cell>>();
 
-        List<Cell> neighbours, flaggedNeighbours;
+    private int width;
+    private int height;
 
-        for (int i = 0; i < width; i++)
-        {
-            for (int j = 0; j < height; j++)
-            {
-                neighbours = GetNeighbours(cells[i, j]);
+    private bool updatedOnce;
 
-                if (cells[i, j].number == neighbours.Count)
-                {
-                    FlagAll(neighbours);
-                }
-
-                flaggedNeighbours = GetFlaggedNeighbours(cells[i, j]);
-
-                if (cells[i, j].number == flaggedNeighbours.Count)
-                {
-                    RevealAll(GetNonFlaggedNeighbours(cells[i, j]));
-                }
-            }
-        }
-
-
-    }*/
-
-    public Vector2Int cellPos;
+    private IEnumerator solveCoroutine;
 
     public void Solve(Cell[,] cells)
     {
-        /*int width = cells.GetLength(0);
-        int height = cells.GetLength(1);
-
-        for (int i = 0; i < width; i++)
+        //First time check
+        if (width == 0 || height == 0)
         {
-            for (int j = 0; j < height; j++)
-            {
-                *//*yield return new WaitForSeconds(1);
-                Debug.Log(i + ":" + j + "-" + cells[i, j].revealed);*//*
+            width = cells.GetLength(0);
+            height = cells.GetLength(1);
 
-                if (!cells[i, j].revealed)
+            for (int x = 0; x < width; x++)
+            {
+                for (int y = 0; y < height; y++)
+                {
+                    Cell cell = cells[x, y];
+                    List<Cell> allNeighbours = GetNeighbours(cell);
+
+                    for (int i = 0; i < allNeighbours.Count; i++)
+                    {
+                        Tuple<Cell, Cell> pair = new Tuple<Cell, Cell>(cell, allNeighbours[i]);
+                        cellPairs.Add(pair);
+                    }
+                }
+            }
+
+            GameManager.Instance.RevealRandomCell();
+        }
+        solveCoroutine = SolveRoutine(cells);
+        StartCoroutine(solveCoroutine);
+    }
+
+    public IEnumerator SolveRoutine(Cell[,] cells)
+    {
+        List<Cell> neighbours, flaggedNeighbours;
+
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                Cell cell = cells[x, y];
+
+                if (GameManager.Instance.gameOver)
+                {
+                    yield break;
+                }
+                if (!cell.revealed)
                 {
                     continue;
                 }
-                SolveCell(cells[i, j]);
-                yield break;
 
-                *//*neighbours = GetNeighbours(cells[i, j]);
-
-                if (cells[i, j].number == neighbours.Count)
+                neighbours = GetNeighbours(cell);
+                if (cell.number == neighbours.Count)
                 {
+                    yield return new WaitForSeconds(.1f);
+                    updatedOnce = true;
                     FlagAll(neighbours);
                 }
 
-                flaggedNeighbours = GetFlaggedNeighbours(cells[i, j]);
-
-                if (cells[i, j].number == flaggedNeighbours.Count)
+                flaggedNeighbours = GetFlaggedNeighbours(cell);
+                if (cell.number == flaggedNeighbours.Count)
                 {
-                    RevealAll(GetNonFlaggedNeighbours(cells[i, j]));
-                }*//*
+                    yield return new WaitForSeconds(.1f);
+                    updatedOnce = true;
+                    RevealAll(GetNonFlaggedNeighbours(cell));
+                }
             }
-        }*/
-
-        SolveCell(cells[cellPos.x, cellPos.y]);
-    }
-
-    public void SolveCell(Cell cell, Cell pairedCell = null)
-    {
-        if (GameManager.Instance.CheckWinCondition())
-        {
-
-            return;
         }
 
-        List<Cell> neighbours, flaggedNeighbours;
-
-        neighbours = GetNeighbours(cell);
-        if (cell.number == neighbours.Count)
+        for (int i = 0; i < cellPairs.Count; i++)
         {
-            FlagAll(neighbours);
-        }
-
-        flaggedNeighbours = GetFlaggedNeighbours(cell);
-
-        if (cell.number == flaggedNeighbours.Count)
-        {
-            RevealAll(GetNonFlaggedNeighbours(cell));
-        }
-
-        Cell validNeighbour = GetValidNeighbour(cell, pairedCell);
-
-        if (validNeighbour.type == Cell.Type.Invalid)
-        {
-            return;
-        }
-
-        List<Cell> nonFlaggedNeighbours_Cell = GetNonFlaggedNeighbours(cell);
-        List<Cell> nonFlaggedNeighbours_b = GetNonFlaggedNeighbours(validNeighbour);
-
-        Debug.LogWarning("A :" + cell.position.x + " : " + cell.position.y);
-        Debug.Log("NON FLAGGED NEIGHBOURS A");
-        PrintList(nonFlaggedNeighbours_Cell);
-        Debug.LogWarning("B :" + validNeighbour.position.x + " : " + validNeighbour.position.y);
-        Debug.Log("NON FLAGGED NEIGHBOURS B");
-        PrintList(nonFlaggedNeighbours_b);
-
-        List<Cell> tempHashA = nonFlaggedNeighbours_Cell.Except(nonFlaggedNeighbours_b).ToList();
-        Debug.Log("A|B");
-        PrintList(tempHashA);
-
-        List<Cell> tempHashB = nonFlaggedNeighbours_b.Except(nonFlaggedNeighbours_Cell).ToList();
-        Debug.Log("B|A");
-        PrintList(tempHashB);
-
-        int aNum = cell.number - flaggedNeighbours.Count;
-        int bNum = validNeighbour.number - GetFlaggedNeighbours(validNeighbour).Count;
-
-        if (Mathf.Abs(aNum - bNum) == tempHashA.Count)
-        {
-            FlagAll(tempHashA.ToList());
-            RevealAll(tempHashB.ToList());
-        }
-
-        solveCor = SolveAgain(validNeighbour, cell);
-        StartCoroutine(solveCor);
-    }
-
-    IEnumerator SolveAgain(Cell cell, Cell pairedCell)
-    {
-        yield return new WaitForSeconds(1);
-        SolveCell(cell, pairedCell);
-        yield break;
-    }
-
-    public Cell GetValidNeighbour(Cell cell, Cell pairedCell)
-    {
-        int x, y;
-        Cell cellToLookAt;
-
-        if (cell.validNeighbours.Count == 0)
-        {
-
-        }
-
-        for (int adjX = -1; adjX <= 1; adjX++)
-        {
-            for (int adjY = -1; adjY <= 1; adjY++)
+            if (GameManager.Instance.gameOver)
             {
-                if (adjX == 0 && adjY == 0)
-                {
-                    continue;
-                }
+                yield break;
+            }
 
-                x = cell.position.x + adjX;
-                y = cell.position.y + adjY;
+            Cell A = cellPairs[i].Item1;
+            Cell B = cellPairs[i].Item2;
 
-                cellToLookAt = GameManager.Instance.GetCell(x, y);
+            if (!A.revealed || !B.revealed || A.number != 0 || B.number != 0)
+            {
+                continue;
+            }
 
-                if (pairedCell != null && cellToLookAt.position == pairedCell.position)
-                {
-                    continue;
-                }
+            List<Cell> nfc_A = GetNonFlaggedNeighbours(A);
+            List<Cell> nfc_B = GetNonFlaggedNeighbours(B);
 
-                if (cellToLookAt.type == Cell.Type.Number && cellToLookAt.revealed && GetNeighbours(cellToLookAt).Count != 0)
-                {
-                    return cellToLookAt;
-                }
+            List<Cell> AdiffB = nfc_A.Except(nfc_B).ToList();
+            List<Cell> BdiffA = nfc_B.Except(nfc_A).ToList();
+
+            int validCellCountA = A.number - GetFlaggedNeighbours(A).Count;
+            int validCellCountB = B.number - GetFlaggedNeighbours(B).Count;
+
+            if (validCellCountA - validCellCountB == AdiffB.Count)
+            {
+                yield return new WaitForSeconds(.1f);
+                updatedOnce = true;
+                FlagAll(AdiffB);
+                RevealAll(BdiffA);
             }
         }
-        return new Cell();
+
+        Debug.Log(updatedOnce);
+
+        if (!updatedOnce)
+        {
+            GameManager.Instance.RevealRandomCell();
+        }
+        else
+        {
+            updatedOnce = false;
+        }
+
+        StopCoroutine(solveCoroutine);
+        solveCoroutine = SolveRoutine(cells);
+        StartCoroutine(solveCoroutine);
     }
 
     public List<Cell> GetNeighbours(Cell cell)
     {
         int x, y;
-        Cell cellToLookAt;
+        Cell neighbour;
         List<Cell> neighbours = new List<Cell>();
 
         for (int adjX = -1; adjX <= 1; adjX++)
@@ -202,11 +153,11 @@ public class Solver : MonoBehaviour
                 x = cell.position.x + adjX;
                 y = cell.position.y + adjY;
 
-                cellToLookAt = GameManager.Instance.GetCell(x, y);
+                neighbour = GameManager.Instance.GetCell(x, y);
 
-                if (cellToLookAt.type != Cell.Type.Invalid && !cellToLookAt.revealed)
+                if (neighbour.type != Cell.Type.Invalid && !neighbour.revealed)
                 {
-                    neighbours.Add(cellToLookAt);
+                    neighbours.Add(neighbour);
                 }
             }
         }
@@ -233,7 +184,7 @@ public class Solver : MonoBehaviour
 
                 adjCell = GameManager.Instance.GetCell(x, y);
 
-                if (adjCell.type != Cell.Type.Invalid && adjCell.flagged)
+                if (adjCell.type != Cell.Type.Invalid && !adjCell.revealed && adjCell.flagged)
                 {
                     flaggedNeighbours.Add(adjCell);
                 }
@@ -286,14 +237,7 @@ public class Solver : MonoBehaviour
     {
         for (int i = 0; i < neighbours.Count; i++)
         {
-            if (neighbours[i].type == Cell.Type.Empty)
-            {
-                GameManager.Instance.Flood(neighbours[i]);
-            }
-            else
-            {
-                GameManager.Instance.RevealNumber(neighbours[i]);
-            }
+            GameManager.Instance.Reveal(neighbours[i]);
         }
     }
 

@@ -17,7 +17,5 @@ public class Cell
     public bool revealed;
     public bool flagged;
     public bool exploded;
-
-    public List<Cell> validNeighbours = new List<Cell>();
 }
 
