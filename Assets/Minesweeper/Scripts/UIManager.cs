@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class UIManager : MonoBehaviour
 {
@@ -23,6 +24,10 @@ public class UIManager : MonoBehaviour
 
     public void OnClickAutoSolve()
     {
+        if (GameManager.Instance.gameOver)
+        {
+            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        }
         GameManager.Instance.RunSolver();
     }
 

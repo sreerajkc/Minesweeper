@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEditor;
 using UnityEngine;
 
 /// <summary>
@@ -11,7 +12,7 @@ using UnityEngine;
 public class Solver : MonoBehaviour
 {
     //All the possible cellPairs;
-    private List<Tuple<Cell, Cell>> cellPairs = new List<Tuple<Cell, Cell>>();
+    public List<Tuple<Cell, Cell>> cellPairs = new List<Tuple<Cell, Cell>>();
 
     public List<Cell> boundaryCells;
 
@@ -39,38 +40,54 @@ public class Solver : MonoBehaviour
     /// <returns></returns>
     public IEnumerator SolveRoutine(List<Cell> boundaryCells)
     {
-        List<Cell> neighbours, flaggedNeighbours;
+        List<Cell> neighbours, flaggedNeighbours, nonFlaggedNeighbours;
 
         for (int i = 0; i < boundaryCells.Count; i++)
         {
             Cell cell = boundaryCells[i];
-            if (cell.number == 0)
+
+            if (GameManager.Instance.gameOver)
+            {
+                yield break;
+            }
+
+            if (cell.type == Cell.Type.Empty)
             {
                 RemoveBoundaryCell(cell);
                 continue;
             }
 
+            nonFlaggedNeighbours = GetNonFlaggedNeighbours(cell);
+            if (nonFlaggedNeighbours.Count == 0)
+            {
+                CheckNeighbourCounts(cell);
+            }
+
             neighbours = GetNeighbours(cell);
+
             if (cell.number == neighbours.Count)
             {
                 yield return new WaitForSeconds(timeInterval);
-                RemoveBoundaryCell(cell);
                 boardUpdated = true;
                 FlagAll(neighbours);
             }
 
             flaggedNeighbours = GetFlaggedNeighbours(cell);
+
             if (cell.number == flaggedNeighbours.Count)
             {
                 yield return new WaitForSeconds(timeInterval);
-
-                RemoveBoundaryCell(cell);
                 boardUpdated = true;
                 RevealAll(GetNonFlaggedNeighbours(cell));
             }
         }
         for (int i = 0; i < cellPairs.Count; i++)
         {
+            if (GameManager.Instance.gameOver)
+            {
+                yield break;
+            }
+
             Cell A = cellPairs[i].Item1;
             Cell B = cellPairs[i].Item2;
 
@@ -239,7 +256,65 @@ public class Solver : MonoBehaviour
                 cellPairs.RemoveAt(i);
             }
         }
+
         boundaryCells.Remove(cell);
+    }
+
+    public void RemovePair(Cell a, Cell b)
+    {
+        cellPairs.Remove(Tuple.Create(a, b));
+    }
+
+    public void AddBoundaryCell(Cell cell)
+    {
+        boundaryCells.Add(cell);
+
+        List<Cell> nfn = GetNonFlaggedNeighbours(cell);
+
+        for (int i = 0; i < nfn.Count; i++)
+        {
+            List<Cell> fn_a = GetFlaggedNeighbours(cell);
+            List<Cell> nfn_a = GetNonFlaggedNeighbours(cell);
+
+            List<Cell> fn_b = GetFlaggedNeighbours(nfn[i]);
+            List<Cell> nfn_b = GetNonFlaggedNeighbours(nfn[i]);
+
+            List<Cell> a_u_B = fn_a.Union(fn_b).ToList();
+
+            if (nfn_a.Count == 0 && nfn_b.Count == 0 && fn_a.Count == fn_b.Count && fn_b.Count == a_u_B.Count)
+            {
+                RemovePair(cell, nfn[i]);
+                continue;
+            }
+
+            cellPairs.Add(Tuple.Create(cell, nfn[i]));
+        }
+    }
+
+    private void CheckNeighbourCounts(Cell cell)
+    {
+        List<Cell> nfn = GetNonFlaggedNeighbours(cell);
+        List<int> indexes = new List<int>();
+
+        for (int i = 0; i < nfn.Count; i++)
+        {
+            if (GetNonFlaggedNeighbours(nfn[i]).Count != 0)
+            {
+                indexes.Add(i);
+            }
+        }
+
+        if (indexes.Count == 0)
+        {
+            RemoveBoundaryCell(cell);
+        }
+        else
+        {
+            for (int i = 0; i < indexes.Count; i++)
+            {
+                RemovePair(cell, nfn[indexes[i]]);
+            }
+        }
     }
 
 }

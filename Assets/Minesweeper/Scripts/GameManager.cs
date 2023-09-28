@@ -206,7 +206,7 @@ public class GameManager : MonoBehaviour
     {
         currentNonMineCellCount--;
 
-        solver.boundaryCells.Add(cell);
+        solver.AddBoundaryCell(cell);
 
         cell.revealed = true;
         cells[cell.position.x, cell.position.y] = cell;
@@ -233,7 +233,7 @@ public class GameManager : MonoBehaviour
         }
         else
         {
-            solver.boundaryCells.Add(cell);
+            solver.AddBoundaryCell(cell);
         }
 
         if (CheckWinCondition()) gameOver = true;
